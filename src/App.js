@@ -1,25 +1,67 @@
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import ProjectList from './components/ProjectList';
+import DeleteConfirmation from './components/DeleteConfirmation';
+import SearchBar from './components/SearchBar';
 
 function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+    const [projects, setProjects] = useState([]);
+    const [deleteConfirmVisible, setDeleteConfirmVisible] = useState(false);
+    const [currentProject, setCurrentProject] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+
+    useEffect(() => {
+        fetchProjects();
+    }, []);
+
+    const fetchProjects = async () => {
+        try {
+            const response = await axios.get('http://localhost:5000/api/projects');
+            setProjects(response.data);
+        } catch (error) {
+            console.error('Error fetching projects:', error);
+        }
+    };
+
+    const handleDelete = projectName => {
+        setCurrentProject(projectName);
+        setDeleteConfirmVisible(true);
+    };
+
+    const confirmDelete = async () => {
+        try {
+            await axios.delete(`http://localhost:5000/api/projects/${currentProject}`);
+            setProjects(prevProjects => prevProjects.filter(project => project.name !== currentProject));
+            setDeleteConfirmVisible(false);
+            console.log(`Deleted ${currentProject}`);
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+            setDeleteConfirmVisible(false);
+        }
+    };
+
+    const cancelDelete = () => {
+        setDeleteConfirmVisible(false);
+    };
+
+    const handleSearch = value => {
+        setSearchTerm(value);
+    };
+
+    return (
+        <div style={{ margin: '50px' }}>
+            <SearchBar onSearch={handleSearch} />
+            <ProjectList projects={projects} onDelete={handleDelete} searchTerm={searchTerm} />
+            {deleteConfirmVisible && (
+                <DeleteConfirmation
+                    visible={deleteConfirmVisible}
+                    onConfirm={confirmDelete}
+                    onCancel={cancelDelete}
+                    projectName={currentProject}
+                />
+            )}
+        </div>
+    );
 }
 
 export default App;
